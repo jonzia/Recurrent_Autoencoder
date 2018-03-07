@@ -1,4 +1,4 @@
-# Recurrent Autoencoder
+# Recurrent Autoencoder v1.0.1
 
 ## Overview
 Recurrent autoencoder for time-series analysis.
