@@ -5,7 +5,7 @@
 # Georgia Institute of Technology
 # ----------------------------------------------------
 import tensorflow as tf
-import network as net
+import network_autoencoder as net
 import pandas as pd
 import random as rd
 import numpy as np
@@ -34,9 +34,9 @@ LOAD_FILE = False 		# Load initial LSTM model from saved checkpoint?
 # ----------------------------------------------------
 # Instantiate Network Classes
 # ----------------------------------------------------
-lstm_encoder = net.Network(batch_size = 5, num_steps = 100, num_lstm_hidden = 15, input_features = 9, latent = 10)
-lstm_decoder = net.Network(batch_size = lstm_encoder.batch_size, 
-	num_steps = lstm_encoder.num_steps, num_lstm_hidden = 15, input_features = lstm_encoder.latent+lstm_encoder.input_features)
+lstm_encoder = net.EncoderNetwork()
+lstm_decoder = net.DecoderNetwork(batch_size = lstm_encoder.batch_size, num_steps = lstm_encoder.num_steps, 
+	input_features = lstm_encoder.latent+lstm_encoder.input_features)
 
 
 # ----------------------------------------------------
@@ -50,13 +50,19 @@ with tf.name_scope("Training_Data"):	# Training dataset
 with tf.name_scope("Validation_Data"):	# Validation dataset
 	vDataset = os.path.join(dir_name, "data/validationdata.csv")
 with tf.name_scope("Model_Data"):		# Model save/load paths
+	# load_path = "D:\\Documents\\checkpoints\\model"				# Load previous model
+	# save_path = "D:\\Documents\\checkpoints\\model"				# Save model at each step
+	# save_path_op = "D:\\Documents\\checkpoints\\model_op"		# Save optimal model
 	load_path = os.path.join(dir_name, "checkpoints/model")		# Load previous model
 	save_path = os.path.join(dir_name, "checkpoints/model")		# Save model at each step
 	save_path_op = os.path.join(dir_name, "checkpoints/model_op")	# Save optimal model
 with tf.name_scope("Filewriter_Data"):	# Filewriter save path
+	#filewriter_path = "D:\\Documents\\output"
 	filewriter_path = os.path.join(dir_name, "output")
 with tf.name_scope("Output_Data"):		# Output data filenames (.txt)
 	# These .txt files will contain loss data for Matlab analysis
+	#training_loss = "D:\\Documents\\training_loss.txt"
+	#validation_loss = "D:\\Documents\\validation_loss.txt"
 	training_loss = os.path.join(dir_name, "training_loss.txt")
 	validation_loss = os.path.join(dir_name, "validation_loss.txt")
 
@@ -186,7 +192,7 @@ with tf.variable_scope("Encoder_RNN"):
 		logit = tf.matmul(output, W_latent) + b_latent
 latent_layer = tf.convert_to_tensor(logit)
 # Converting to dimensions [batch_size, 1 (num_steps), latent]
-latent_layer = tf.expand_dims(latent_layer,1)
+latent_layer = tf.expand_dims(latent_layer,1,name='latent_layer')
 
 
 # ----------------------------------------------------
@@ -270,7 +276,7 @@ with tf.Session() as sess:
 	# Determine learning rate decay
 	decay_rate = set_decay_rate(DECAY_TYPE, LEARNING_RATE_INIT, LEARNING_RATE_END, NUM_TRAINING)
 
-	if lstm_encoder.decay_type != 'none':
+	if DECAY_TYPE != 'none':
 		print('\nLearning Decay Rate = ', decay_rate)
 
 	# Set number of trials to NUM_TRAINING
@@ -368,7 +374,7 @@ with tf.Session() as sess:
 			print("\nTime Remaining: %d minutes" % min_remaining)
 
 			# Print learning rate if learning rate decay is used
-			if lstm_encoder.decay_type != 'none':
+			if DECAY_TYPE != 'none':
 				print("\nLearning Rate = ", decayed_learning_rate)
 
 	# Write training and validation loss to file

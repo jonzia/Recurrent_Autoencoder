@@ -18,8 +18,9 @@ import os
 # ----------------------------------------------------
 # Instantiate Network Classes
 # ----------------------------------------------------
-lstm_encoder = net.Network()
-lstm_decoder = net.Network()
+lstm_encoder = net.EncoderNetwork()
+lstm_decoder = net.DecoderNetwork(batch_size = lstm_encoder.batch_size, num_steps = lstm_encoder.num_steps, 
+	input_features = lstm_encoder.latent+lstm_encoder.input_features)
 
 # ----------------------------------------------------
 # User-Defined Constants
