@@ -1,11 +1,11 @@
 # ----------------------------------------------------
-# LSTM Network Test Bench for Autoencoder v1.0.1
+# LSTM Network Test Bench for Autoencoder v1.0.2
 # Created by: Jonathan Zia
 # Last Modified: Tuesday, March 6, 2018
 # Georgia Institute of Technology
 # ----------------------------------------------------
 import tensorflow as tf
-import network as net
+import network_autoencoder as net
 import pandas as pd
 import random as rd
 import numpy as np
@@ -36,13 +36,13 @@ WINDOW_INT = lstm_encoder.num_steps		# Rolling window step interval
 # ----------------------------------------------------
 # Specify filenames
 # Root directory:
-dir_name = "ROOT_DIRECTORY"
+dir_name = "Users/username"
 with tf.name_scope("Training_Data"):	# Testing dataset
-	Dataset = os.path.join(dir_name, "validationdata.csv")
+	Dataset = os.path.join(dir_name, "data/dataset.csv")
 with tf.name_scope("Model_Data"):		# Model load path
 	load_path = os.path.join(dir_name, "checkpoints/model")
 with tf.name_scope("Filewriter_Data"):	# Filewriter save path
-	filewriter_path = os.path.join(dir_name, "output")
+	filewriter_path = os.path.join(dir_name, "checkpoints/model")
 with tf.name_scope("Output_Data"):		# Output data filenames (.txt)
 	# These .txt files will contain prediction and target data respectively for Matlab analysis
 	prediction_file = os.path.join(dir_name, "predictions.txt")
@@ -109,9 +109,9 @@ targets = tf.placeholder(tf.float32, [BATCH_SIZE, lstm_encoder.num_steps, lstm_e
 # ----------------------------------------------------
 # Build LSTM cell
 # Creating basic LSTM cell
-encoder_cell = tf.contrib.rnn.BasicLSTMCell(lstm_encoder.num_lstm_hidden)
+encoder_cell = tf.contrib.rnn.BasicLSTMCell(lstm_encoder.num_lstm_hidden,name='Encoder_Cell')
 # Adding dropout wrapper to cell
-encoder_cell = tf.nn.rnn_cell.DropoutWrapper(encoder_cell, input_keep_prob=I_KEEP_PROB, output_keep_prob=O_KEEP_PROB)
+encoder_cell = tf.nn.rnn_cell.DropoutWrapper(encoder_cell, input_keep_prob=lstm_encoder.i_keep_prob, output_keep_prob=lstm_encoder.o_keep_prob)
 
 # Initialize weights and biases for latent layer.
 with tf.name_scope("Encoder_Variables"):
@@ -121,22 +121,20 @@ with tf.name_scope("Encoder_Variables"):
 	tf.summary.histogram('Biases',b_latent)
 
 # Add LSTM cells to dynamic_rnn and implement truncated BPTT
-initial_state_encoder = state_encoder = encoder_cell.zero_state(BATCH_SIZE, tf.float32)
-logits = []
+initial_state_encoder = state_encoder = encoder_cell.zero_state(lstm_encoder.batch_size, tf.float32)
 with tf.variable_scope("Encoder_RNN"):
 	for i in range(lstm_encoder.num_steps):
 		# Obtain output at each step
-		output, state = tf.nn.dynamic_rnn(encoder_cell, inputs[:,i:i+1,:], initial_state=state_encoder)
-		# Obtain output and convert to logit
-		# Reshape output to remove extra dimension
-		output = tf.reshape(output,[BATCH_SIZE,lstm_encoder.num_lstm_hidden])
-		with tf.name_scope("Encoder_Output"):
-			# Obtain logits by passing output
-			logit = tf.matmul(output, W_latent) + b_latent
-			logits.append(logit)
-latent_layer = tf.convert_to_tensor(logits)
-# Converting to dimensions [batch_size, num_steps, latent]
-latent_layer = tf.transpose(logits, perm=[1, 0, 2], name='Latent_Layer')
+		output, state_encoder = tf.nn.dynamic_rnn(encoder_cell, inputs[:,i:i+1,:], initial_state=state_encoder)
+	# Obtain final output and convert to logit
+	# Reshape output to remove extra dimension
+	output = tf.reshape(output,[lstm_encoder.batch_size,lstm_encoder.num_lstm_hidden])
+	with tf.name_scope("Encoder_Output"):
+		# Obtain logits by passing output
+		logit = tf.matmul(output, W_latent) + b_latent
+latent_layer = tf.convert_to_tensor(logit)
+# Converting to dimensions [batch_size, 1 (num_steps), latent]
+latent_layer = tf.expand_dims(latent_layer,1)
 
 
 # ----------------------------------------------------
@@ -144,26 +142,31 @@ latent_layer = tf.transpose(logits, perm=[1, 0, 2], name='Latent_Layer')
 # ----------------------------------------------------
 # Build LSTM cell
 # Creating basic LSTM cell
-decoder_cell = tf.contrib.rnn.BasicLSTMCell(lstm_decoder.num_lstm_hidden)
+decoder_cell_1 = tf.contrib.rnn.BasicLSTMCell(lstm_decoder.num_lstm_hidden,name='Decoder_Cell_1')
+decoder_cell_2 = tf.contrib.rnn.BasicLSTMCell(lstm_decoder.num_lstm_hidden,name='Decoder_Cell_2')
 # Adding dropout wrapper to cell
-decoder_cell = tf.nn.rnn_cell.DropoutWrapper(decoder_cell, input_keep_prob=lstm_decoder.i_keep_prob, output_keep_prob=lstm_decoder.o_keep_prob)
+decoder_cell_1 = tf.nn.rnn_cell.DropoutWrapper(decoder_cell_1, input_keep_prob=lstm_decoder.i_keep_prob, output_keep_prob=lstm_decoder.o_keep_prob)
+decoder_cell_2 = tf.nn.rnn_cell.DropoutWrapper(decoder_cell_2, input_keep_prob=lstm_decoder.i_keep_prob, output_keep_prob=lstm_decoder.o_keep_prob)
 
 # Initialize weights and biases for output layer.
 with tf.name_scope("Decoder_Variables"):
-	W_output = init_values([lstm_decoder.num_lstm_hidden, lstm_decoder.input_features])
+	W_output = init_values([lstm_decoder.num_lstm_hidden, lstm_encoder.input_features])
 	tf.summary.histogram('Weights',W_output)
-	b_output = init_values([lstm_decoder.input_features])
+	b_output = init_values([lstm_encoder.input_features])
 	tf.summary.histogram('Biases',b_output)
 
-initial_state_decoder = state_decoder = decoder_cell.zero_state(BATCH_SIZE, tf.float32)
+initial_state_decoder = state_decoder = decoder_cell_1.zero_state(lstm_decoder.batch_size, tf.float32)
 logits = []
 with tf.variable_scope("Decoder_RNN"):
 	for i in range(lstm_decoder.num_steps):
 		# Obtain output at each step
-		output, state = tf.nn.dynamic_rnn(decoder_cell, latent_layer[:,i:i+1,:], initial_state=state_decoder)
+		if i == 0:
+			output, state_decoder = tf.nn.dynamic_rnn(decoder_cell_1, latent_layer, initial_state=state_decoder)
+		else:
+			output, state_decoder = tf.nn.dynamic_rnn(decoder_cell_2, tf.expand_dims(output,1), initial_state=state_decoder)
 		# Obtain output and convert to logit
 		# Reshape output to remove extra dimension
-		output = tf.reshape(output,[BATCH_SIZE,lstm_decoder.num_lstm_hidden])
+		output = tf.reshape(output,[lstm_decoder.batch_size,lstm_decoder.num_lstm_hidden])
 		with tf.name_scope("Decoder_Output"):
 			# Obtain logits by passing output
 			logit = tf.matmul(output, W_output) + b_output

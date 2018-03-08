@@ -1,7 +1,7 @@
 # ----------------------------------------------------
-# Time-Series Autoencoder using Tensorflow 1.0.1
+# Time-Series Autoencoder using Tensorflow 1.0.2
 # Created by: Jonathan Zia
-# Last Modified: Tuesday, March 6, 2018
+# Last Modified: Thursday, March 8, 2018
 # Georgia Institute of Technology
 # ----------------------------------------------------
 import tensorflow as tf
@@ -14,23 +14,29 @@ import math
 import csv
 import os
 
-
-# ----------------------------------------------------
-# Instantiate Network Classes
-# ----------------------------------------------------
-lstm_encoder = net.Network()
-lstm_decoder = net.Network()
-
-
 # ----------------------------------------------------
 # User-Defined Constants
 # ----------------------------------------------------
 # Training
-NUM_TRAINING = 10		# Number of training batches (balanced minibatches)
-NUM_VALIDATION = 10		# Number of validation batches (balanced minibatches)
+NUM_TRAINING = 100			# Number of training batches (balanced minibatches)
+NUM_VALIDATION = 100		# Number of validation batches (balanced minibatches)
+
+# Learning rate decay
+# Decay type can be 'none', 'exp', 'inv_time', or 'nat_exp'
+DECAY_TYPE = 'exp'					# Set decay type for learning rate
+LEARNING_RATE_INIT = 0.001			# Set initial learning rate for optimizer (default 0.001) (fixed LR for 'none')
+LEARNING_RATE_END = 0.00001			# Set ending learning rate for optimizer
 
 # Load File
 LOAD_FILE = False 		# Load initial LSTM model from saved checkpoint?
+
+
+# ----------------------------------------------------
+# Instantiate Network Classes
+# ----------------------------------------------------
+lstm_encoder = net.Network(batch_size = 5, num_steps = 100, num_lstm_hidden = 15, input_features = 9, latent = 10)
+lstm_decoder = net.Network(batch_size = lstm_encoder.batch_size, 
+	num_steps = lstm_encoder.num_steps, num_lstm_hidden = 15, input_features = lstm_encoder.latent+lstm_encoder.input_features)
 
 
 # ----------------------------------------------------
@@ -38,11 +44,11 @@ LOAD_FILE = False 		# Load initial LSTM model from saved checkpoint?
 # ----------------------------------------------------
 # Specify filenames
 # Root directory:
-dir_name = "ROOT_DIRECTORY"
+dir_name = "/Users/username"
 with tf.name_scope("Training_Data"):	# Training dataset
-	tDataset = os.path.join(dir_name, "trainingdata.csv")
+	tDataset = os.path.join(dir_name, "data/trainingdata.csv")
 with tf.name_scope("Validation_Data"):	# Validation dataset
-	vDataset = os.path.join(dir_name, "validationdata.csv")
+	vDataset = os.path.join(dir_name, "data/validationdata.csv")
 with tf.name_scope("Model_Data"):		# Model save/load paths
 	load_path = os.path.join(dir_name, "checkpoints/model")		# Load previous model
 	save_path = os.path.join(dir_name, "checkpoints/model")		# Save model at each step
@@ -155,7 +161,7 @@ learning_rate = tf.placeholder(tf.float32, name="Learning_Rate_Placeholder")
 # ----------------------------------------------------
 # Build LSTM cell
 # Creating basic LSTM cell
-encoder_cell = tf.contrib.rnn.BasicLSTMCell(lstm_encoder.num_lstm_hidden)
+encoder_cell = tf.contrib.rnn.BasicLSTMCell(lstm_encoder.num_lstm_hidden,name='Encoder_Cell')
 # Adding dropout wrapper to cell
 encoder_cell = tf.nn.rnn_cell.DropoutWrapper(encoder_cell, input_keep_prob=lstm_encoder.i_keep_prob, output_keep_prob=lstm_encoder.o_keep_prob)
 
@@ -168,21 +174,19 @@ with tf.name_scope("Encoder_Variables"):
 
 # Add LSTM cells to dynamic_rnn and implement truncated BPTT
 initial_state_encoder = state_encoder = encoder_cell.zero_state(lstm_encoder.batch_size, tf.float32)
-logits = []
 with tf.variable_scope("Encoder_RNN"):
 	for i in range(lstm_encoder.num_steps):
 		# Obtain output at each step
-		output, state = tf.nn.dynamic_rnn(encoder_cell, inputs[:,i:i+1,:], initial_state=state_encoder)
-		# Obtain output and convert to logit
-		# Reshape output to remove extra dimension
-		output = tf.reshape(output,[lstm_encoder.batch_size,lstm_encoder.num_lstm_hidden])
-		with tf.name_scope("Encoder_Output"):
-			# Obtain logits by passing output
-			logit = tf.matmul(output, W_latent) + b_latent
-			logits.append(logit)
-latent_layer = tf.convert_to_tensor(logits)
-# Converting to dimensions [batch_size, num_steps, latent]
-latent_layer = tf.transpose(logits, perm=[1, 0, 2], name='Latent_Layer')
+		output, state_encoder = tf.nn.dynamic_rnn(encoder_cell, inputs[:,i:i+1,:], initial_state=state_encoder)
+	# Obtain final output and convert to logit
+	# Reshape output to remove extra dimension
+	output = tf.reshape(output,[lstm_encoder.batch_size,lstm_encoder.num_lstm_hidden])
+	with tf.name_scope("Encoder_Output"):
+		# Obtain logits by passing output
+		logit = tf.matmul(output, W_latent) + b_latent
+latent_layer = tf.convert_to_tensor(logit)
+# Converting to dimensions [batch_size, 1 (num_steps), latent]
+latent_layer = tf.expand_dims(latent_layer,1)
 
 
 # ----------------------------------------------------
@@ -190,23 +194,28 @@ latent_layer = tf.transpose(logits, perm=[1, 0, 2], name='Latent_Layer')
 # ----------------------------------------------------
 # Build LSTM cell
 # Creating basic LSTM cell
-decoder_cell = tf.contrib.rnn.BasicLSTMCell(lstm_decoder.num_lstm_hidden)
+decoder_cell_1 = tf.contrib.rnn.BasicLSTMCell(lstm_decoder.num_lstm_hidden,name='Decoder_Cell_1')
+decoder_cell_2 = tf.contrib.rnn.BasicLSTMCell(lstm_decoder.num_lstm_hidden,name='Decoder_Cell_2')
 # Adding dropout wrapper to cell
-decoder_cell = tf.nn.rnn_cell.DropoutWrapper(decoder_cell, input_keep_prob=lstm_decoder.i_keep_prob, output_keep_prob=lstm_decoder.o_keep_prob)
+decoder_cell_1 = tf.nn.rnn_cell.DropoutWrapper(decoder_cell_1, input_keep_prob=lstm_decoder.i_keep_prob, output_keep_prob=lstm_decoder.o_keep_prob)
+decoder_cell_2 = tf.nn.rnn_cell.DropoutWrapper(decoder_cell_2, input_keep_prob=lstm_decoder.i_keep_prob, output_keep_prob=lstm_decoder.o_keep_prob)
 
 # Initialize weights and biases for output layer.
 with tf.name_scope("Decoder_Variables"):
-	W_output = init_values([lstm_decoder.num_lstm_hidden, lstm_decoder.input_features])
+	W_output = init_values([lstm_decoder.num_lstm_hidden, lstm_encoder.input_features])
 	tf.summary.histogram('Weights',W_output)
-	b_output = init_values([lstm_decoder.input_features])
+	b_output = init_values([lstm_encoder.input_features])
 	tf.summary.histogram('Biases',b_output)
 
-initial_state_decoder = state_decoder = decoder_cell.zero_state(lstm_decoder.batch_size, tf.float32)
+initial_state_decoder = state_decoder = decoder_cell_1.zero_state(lstm_decoder.batch_size, tf.float32)
 logits = []
 with tf.variable_scope("Decoder_RNN"):
 	for i in range(lstm_decoder.num_steps):
 		# Obtain output at each step
-		output, state = tf.nn.dynamic_rnn(decoder_cell, latent_layer[:,i:i+1,:], initial_state=state_decoder)
+		if i == 0:
+			output, state_decoder = tf.nn.dynamic_rnn(decoder_cell_1, latent_layer, initial_state=state_decoder)
+		else:
+			output, state_decoder = tf.nn.dynamic_rnn(decoder_cell_2, tf.expand_dims(output,1), initial_state=state_decoder)
 		# Obtain output and convert to logit
 		# Reshape output to remove extra dimension
 		output = tf.reshape(output,[lstm_decoder.batch_size,lstm_decoder.num_lstm_hidden])
@@ -259,7 +268,7 @@ with tf.Session() as sess:
 	# Initialize optimal loss
 	loss_op = 0
 	# Determine learning rate decay
-	decay_rate = set_decay_rate(lstm_encoder.decay_type, lstm_encoder.learning_rate_init, lstm_encoder.learning_rate_end, NUM_TRAINING)
+	decay_rate = set_decay_rate(DECAY_TYPE, LEARNING_RATE_INIT, LEARNING_RATE_END, NUM_TRAINING)
 
 	if lstm_encoder.decay_type != 'none':
 		print('\nLearning Decay Rate = ', decay_rate)
@@ -284,7 +293,7 @@ with tf.Session() as sess:
 			print("\nOptimizing at step", step)
 
 			# Calculate time-decay learning rate:
-			decayed_learning_rate = decayed_rate(lstm_encoder.decay_type, decay_rate, lstm_encoder.learning_rate_init, step)
+			decayed_learning_rate = decayed_rate(DECAY_TYPE, decay_rate, LEARNING_RATE_INIT, step)
 
 			# Input data and learning rate
 			feed_dict = {inputs: features, targets:labels, learning_rate:decayed_learning_rate}

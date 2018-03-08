@@ -1,7 +1,7 @@
 # ----------------------------------------------------
-# Network Class for Autoencoder v1.0.1
+# Network Class for Autoencoder v1.0.2
 # Created by: Jonathan Zia
-# Last Modified: Tuesdsay, March 6, 2018
+# Last Modified: Thursday, March 8, 2018
 # Georgia Institute of Technology
 # ----------------------------------------------------
 
@@ -9,22 +9,16 @@ class Network():
 	"""Class containing all network parameters for use
 	across LSTM_main and test_bench programs."""
 
-	def __init__(self):
+	def __init__(self, batch_size, num_steps, num_lstm_hidden, input_features, latent=0, i_keep_prob=1.0, o_keep_prob=1.0):
 		"""Initialize network attributes"""
 		
 		# Architecture
-		self.batch_size = 5			# Batch size
-		self.num_steps = 100		# Max steps for BPTT
-		self.num_lstm_hidden = 5	# Number of LSTM hidden units
-		self.input_features = 9		# Number of input features
-		self.i_keep_prob = 1.0		# Input keep probability / LSTM cell
-		self.o_keep_prob = 1.0		# Output keep probability / LSTM cell
+		self.batch_size = batch_size			# Batch size
+		self.num_steps = num_steps				# Max steps for BPTT
+		self.num_lstm_hidden = num_lstm_hidden	# Number of LSTM hidden units
+		self.input_features = input_features	# Number of input features
+		self.i_keep_prob = i_keep_prob			# Input keep probability / LSTM cell
+		self.o_keep_prob = o_keep_prob			# Output keep probability / LSTM cell
 
 		# Special autoencoder parameters
-		self.latent = 3				# Number of elements in latent layer
-
-
-		# Decay type can be 'none', 'exp', 'inv_time', or 'nat_exp'
-		self.decay_type = 'exp'		# Set decay type for learning rate
-		self.learning_rate_init = 0.001		# Set initial learning rate for optimizer (default 0.001) (fixed LR for 'none')
-		self.learning_rate_end = 0.00001	# Set ending learning rate for optimizer
+		self.latent = latent					# Number of elements in latent layer
