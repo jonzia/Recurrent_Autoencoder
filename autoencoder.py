@@ -46,23 +46,17 @@ lstm_decoder = net.DecoderNetwork(batch_size = lstm_encoder.batch_size, num_step
 # Root directory:
 dir_name = "/Users/username"
 with tf.name_scope("Training_Data"):	# Training dataset
-	tDataset = os.path.join(dir_name, "data/trainingdata.csv")
+	tDataset = os.path.join(dir_name, "data/dataset.csv")
 with tf.name_scope("Validation_Data"):	# Validation dataset
-	vDataset = os.path.join(dir_name, "data/validationdata.csv")
+	vDataset = os.path.join(dir_name, "data/dataset.csv")
 with tf.name_scope("Model_Data"):		# Model save/load paths
-	# load_path = "D:\\Documents\\checkpoints\\model"				# Load previous model
-	# save_path = "D:\\Documents\\checkpoints\\model"				# Save model at each step
-	# save_path_op = "D:\\Documents\\checkpoints\\model_op"		# Save optimal model
 	load_path = os.path.join(dir_name, "checkpoints/model")		# Load previous model
 	save_path = os.path.join(dir_name, "checkpoints/model")		# Save model at each step
 	save_path_op = os.path.join(dir_name, "checkpoints/model_op")	# Save optimal model
 with tf.name_scope("Filewriter_Data"):	# Filewriter save path
-	#filewriter_path = "D:\\Documents\\output"
 	filewriter_path = os.path.join(dir_name, "output")
 with tf.name_scope("Output_Data"):		# Output data filenames (.txt)
 	# These .txt files will contain loss data for Matlab analysis
-	#training_loss = "D:\\Documents\\training_loss.txt"
-	#validation_loss = "D:\\Documents\\validation_loss.txt"
 	training_loss = os.path.join(dir_name, "training_loss.txt")
 	validation_loss = os.path.join(dir_name, "validation_loss.txt")
 
@@ -188,8 +182,9 @@ with tf.variable_scope("Encoder_RNN"):
 	# Reshape output to remove extra dimension
 	output = tf.reshape(output,[lstm_encoder.batch_size,lstm_encoder.num_lstm_hidden])
 	with tf.name_scope("Encoder_Output"):
-		# Obtain logits by passing output
+		# Obtain logits by performing (weights)*(output)+(biases)
 		logit = tf.matmul(output, W_latent) + b_latent
+# Convert logits to tensor
 latent_layer = tf.convert_to_tensor(logit)
 # Converting to dimensions [batch_size, 1 (num_steps), latent]
 latent_layer = tf.expand_dims(latent_layer,1,name='latent_layer')
@@ -199,10 +194,13 @@ latent_layer = tf.expand_dims(latent_layer,1,name='latent_layer')
 # Building an LSTM Decoder
 # ----------------------------------------------------
 # Build LSTM cell
-# Creating basic LSTM cell
+# Creating basic LSTM cells
+# decoder_cell_1 is the first cell in the decoder layer, accepting latent_layer as an input
+# decoder_cell_2 is each subsequent cell in the decoder layer, accepting the output at (t-1)
+# as the input and the hidden state at (t-1) as the initial state.
 decoder_cell_1 = tf.contrib.rnn.BasicLSTMCell(lstm_decoder.num_lstm_hidden,name='Decoder_Cell_1')
 decoder_cell_2 = tf.contrib.rnn.BasicLSTMCell(lstm_decoder.num_lstm_hidden,name='Decoder_Cell_2')
-# Adding dropout wrapper to cell
+# Adding dropout wrapper to each cell
 decoder_cell_1 = tf.nn.rnn_cell.DropoutWrapper(decoder_cell_1, input_keep_prob=lstm_decoder.i_keep_prob, output_keep_prob=lstm_decoder.o_keep_prob)
 decoder_cell_2 = tf.nn.rnn_cell.DropoutWrapper(decoder_cell_2, input_keep_prob=lstm_decoder.i_keep_prob, output_keep_prob=lstm_decoder.o_keep_prob)
 
@@ -213,22 +211,29 @@ with tf.name_scope("Decoder_Variables"):
 	b_output = init_values([lstm_encoder.input_features])
 	tf.summary.histogram('Biases',b_output)
 
+# Initialize the initial state for the first LSTM cell
 initial_state_decoder = state_decoder = decoder_cell_1.zero_state(lstm_decoder.batch_size, tf.float32)
+# Initialize placeholder for outputs of the decoder layer at each timestep
 logits = []
 with tf.variable_scope("Decoder_RNN"):
 	for i in range(lstm_decoder.num_steps):
 		# Obtain output at each step
+		# For the first timestep...
 		if i == 0:
+			# Input the latent layer and obtain the output and hidden state
 			output, state_decoder = tf.nn.dynamic_rnn(decoder_cell_1, latent_layer, initial_state=state_decoder)
-		else:
+		else: # For all subsequent timesteps...
+			# Input the output at (t-1) and obtain the output at time (t) and the hidden state
 			output, state_decoder = tf.nn.dynamic_rnn(decoder_cell_2, tf.expand_dims(output,1), initial_state=state_decoder)
 		# Obtain output and convert to logit
 		# Reshape output to remove extra dimension
 		output = tf.reshape(output,[lstm_decoder.batch_size,lstm_decoder.num_lstm_hidden])
 		with tf.name_scope("Decoder_Output"):
-			# Obtain logits by passing output
+			# Obtain logits by applying operation (weights)*(outputs)+(biases)
 			logit = tf.matmul(output, W_output) + b_output
+			# Append output at each timestep
 			logits.append(logit)
+# Convert logits to tensor entitled "predictions"
 predictions = tf.convert_to_tensor(logits)
 # Converting to dimensions [batch_size, num_steps, input_features]
 predictions = tf.transpose(logits, perm=[1, 0, 2], name='Predictions')
@@ -237,7 +242,7 @@ predictions = tf.transpose(logits, perm=[1, 0, 2], name='Predictions')
 # ----------------------------------------------------
 # Calculate Loss and Define Optimizer
 # ----------------------------------------------------
-# Calculating softmax cross entropy of labels and logits
+# Calculating mean squared error of labels and logits
 loss = tf.losses.mean_squared_error(labels=targets, predictions=predictions)
 loss = tf.reduce_mean(loss)
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
@@ -265,7 +270,7 @@ with tf.Session() as sess:
 
 	# Training the network
 
-	# Determine whether to use sliding-window or minibatching
+	# Setting step ranges
 	step_range = NUM_TRAINING 		# Set step range for training
 	v_step_range = NUM_VALIDATION	# Set step range for validation
 
