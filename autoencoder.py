@@ -1,11 +1,11 @@
 # ----------------------------------------------------
-# Time-Series Autoencoder using Tensorflow 1.0.2
+# Time-Series Autoencoder using Tensorflow 1.0.3
 # Created by: Jonathan Zia
-# Last Modified: Thursday, March 8, 2018
+# Last Modified: Friday, March 9, 2018
 # Georgia Institute of Technology
 # ----------------------------------------------------
 import tensorflow as tf
-import network_autoencoder as net
+import network as net
 import pandas as pd
 import random as rd
 import numpy as np
@@ -18,12 +18,12 @@ import os
 # User-Defined Constants
 # ----------------------------------------------------
 # Training
-NUM_TRAINING = 100			# Number of training batches (balanced minibatches)
-NUM_VALIDATION = 100		# Number of validation batches (balanced minibatches)
+NUM_TRAINING = 500			# Number of training batches (balanced minibatches)
+NUM_VALIDATION = 500		# Number of validation batches (balanced minibatches)
 
 # Learning rate decay
 # Decay type can be 'none', 'exp', 'inv_time', or 'nat_exp'
-DECAY_TYPE = 'exp'					# Set decay type for learning rate
+DECAY_TYPE = 'none'					# Set decay type for learning rate
 LEARNING_RATE_INIT = 0.001			# Set initial learning rate for optimizer (default 0.001) (fixed LR for 'none')
 LEARNING_RATE_END = 0.00001			# Set ending learning rate for optimizer
 
@@ -50,8 +50,8 @@ with tf.name_scope("Training_Data"):	# Training dataset
 with tf.name_scope("Validation_Data"):	# Validation dataset
 	vDataset = os.path.join(dir_name, "data/dataset.csv")
 with tf.name_scope("Model_Data"):		# Model save/load paths
-	load_path = os.path.join(dir_name, "checkpoints/model")		# Load previous model
-	save_path = os.path.join(dir_name, "checkpoints/model")		# Save model at each step
+	load_path = os.path.join(dir_name, "checkpoints/model")			# Load previous model
+	save_path = os.path.join(dir_name, "checkpoints/model")			# Save model at each step
 	save_path_op = os.path.join(dir_name, "checkpoints/model_op")	# Save optimal model
 with tf.name_scope("Filewriter_Data"):	# Filewriter save path
 	filewriter_path = os.path.join(dir_name, "output")
@@ -223,8 +223,9 @@ with tf.variable_scope("Decoder_RNN"):
 			# Input the latent layer and obtain the output and hidden state
 			output, state_decoder = tf.nn.dynamic_rnn(decoder_cell_1, latent_layer, initial_state=state_decoder)
 		else: # For all subsequent timesteps...
-			# Input the output at (t-1) and obtain the output at time (t) and the hidden state
-			output, state_decoder = tf.nn.dynamic_rnn(decoder_cell_2, tf.expand_dims(output,1), initial_state=state_decoder)
+			# Combine the output layer at (t-1) with the latent layer; then input to obtain output at (t) and the hidden state
+			input_vector = tf.concat([tf.expand_dims(output,1),latent_layer],axis=2,name='Decoder_Input')
+			output, state_decoder = tf.nn.dynamic_rnn(decoder_cell_2, input_vector, initial_state=state_decoder)
 		# Obtain output and convert to logit
 		# Reshape output to remove extra dimension
 		output = tf.reshape(output,[lstm_decoder.batch_size,lstm_decoder.num_lstm_hidden])

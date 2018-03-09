@@ -1,7 +1,7 @@
 # ----------------------------------------------------
-# Network Class for Autoencoder v1.0.2
+# Network Class for Autoencoder v1.0.3
 # Created by: Jonathan Zia
-# Last Modified: Thursday, March 8, 2018
+# Last Modified: Friday, March 9, 2018
 # Georgia Institute of Technology
 # ----------------------------------------------------
 
