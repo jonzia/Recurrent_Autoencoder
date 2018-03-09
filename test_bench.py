@@ -121,14 +121,14 @@ with tf.name_scope("Encoder_Variables"):
 	tf.summary.histogram('Biases',b_latent)
 
 # Add LSTM cells to dynamic_rnn and implement truncated BPTT
-initial_state_encoder = state_encoder = encoder_cell.zero_state(lstm_encoder.batch_size, tf.float32)
+initial_state_encoder = state_encoder = encoder_cell.zero_state(BATCH_SIZE, tf.float32)
 with tf.variable_scope("Encoder_RNN"):
 	for i in range(lstm_encoder.num_steps):
 		# Obtain output at each step
 		output, state_encoder = tf.nn.dynamic_rnn(encoder_cell, inputs[:,i:i+1,:], initial_state=state_encoder)
 	# Obtain final output and convert to logit
 	# Reshape output to remove extra dimension
-	output = tf.reshape(output,[lstm_encoder.batch_size,lstm_encoder.num_lstm_hidden])
+	output = tf.reshape(output,[BATCH_SIZE,lstm_encoder.num_lstm_hidden])
 	with tf.name_scope("Encoder_Output"):
 		# Obtain logits by performing (weights)*(output)+(biases)
 		logit = tf.matmul(output, W_latent) + b_latent
@@ -160,7 +160,7 @@ with tf.name_scope("Decoder_Variables"):
 	tf.summary.histogram('Biases',b_output)
 
 # Initialize the initial state for the first LSTM cell
-initial_state_decoder = state_decoder = decoder_cell_1.zero_state(lstm_decoder.batch_size, tf.float32)
+initial_state_decoder = state_decoder = decoder_cell_1.zero_state(BATCH_SIZE, tf.float32)
 # Initialize placeholder for outputs of the decoder layer at each timestep
 logits = []
 with tf.variable_scope("Decoder_RNN"):
@@ -176,7 +176,7 @@ with tf.variable_scope("Decoder_RNN"):
 			output, state_decoder = tf.nn.dynamic_rnn(decoder_cell_2, input_vector, initial_state=state_decoder)
 		# Obtain output and convert to logit
 		# Reshape output to remove extra dimension
-		output = tf.reshape(output,[lstm_decoder.batch_size,lstm_decoder.num_lstm_hidden])
+		output = tf.reshape(output,[BATCH_SIZE,lstm_decoder.num_lstm_hidden])
 		with tf.name_scope("Decoder_Output"):
 			# Obtain logits by applying operation (weights)*(outputs)+(biases)
 			logit = tf.matmul(output, W_output) + b_output
