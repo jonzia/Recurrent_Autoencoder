@@ -1,10 +1,10 @@
-# Recurrent Autoencoder v1.0.2
+# Recurrent Autoencoder v1.0.3
 
 ## Overview
-Recurrent autoencoder for time-series analysis.
+Recurrent autoencoder for unsupervised feature extraction from multidimensional time-series.
 
 ## Description
-This program implements a recurrent autoencoder for time-series analysis. The input to the program is a .csv file with feature columns. The time-series input is encoded with a single LSTM layer and decoded with a second LSTM layer to recreate the input. The output of the encoder layer feeds in to a single latent layer, which contains a compressed representation of the feature vector. The architecture for the network is the same as illustrated in [this paper](https://openreview.net/pdf/74b996ba787a74199dc0b5ba1df77e436f6ad5a5.pdf).
+This program implements a recurrent autoencoder for time-series analysis. The input to the program is a .csv file with feature columns. The time-series input is encoded with a single LSTM layer and decoded with a second LSTM layer to recreate the input. The output of the encoder layer feeds in to a single latent layer, which contains a compressed representation of the feature vector. The architecture for the network is the same as illustrated in [this paper](https://arxiv.org/pdf/1406.1078.pdf).
 
 ![Tensorboard Graph](https://raw.githubusercontent.com/jonzia/Recurrent_Autoencoder/master/Graph_102.png)
 
@@ -55,7 +55,9 @@ with tf.name_scope("Output_Data"):		# Output data filenames (.txt)
 6. *(Optional)* Run *test_bench.py* to obtain prediction and target values on a test dataset for the trained model. Ensure that proper filepaths are set before running.
 
 ## Change Log
-_v1.0.2_: Updated architecture from that proposed by [D. Hsu](https://arxiv.org/pdf/1707.07961.pdf) to that proposed in [this paper](https://openreview.net/pdf/74b996ba787a74199dc0b5ba1df77e436f6ad5a5.pdf), namely one latent layer compressing all time steps and output-feedback into the decoder layer.
+_v1.0.3_: Updated to a more generalizable architecture proposed by [Cho et. al (2014)](https://arxiv.org/pdf/1406.1078.pdf).
+
+_v1.0.2_: Updated architecture from that proposed by [D. Hsu (2017)](https://arxiv.org/pdf/1707.07961.pdf) to that proposed in [this paper](https://openreview.net/pdf/74b996ba787a74199dc0b5ba1df77e436f6ad5a5.pdf), namely one latent layer compressing all time steps and output-feedback into the decoder layer.
 
 ## Notes
 (1) Ensure that you have [Tensorflow](https://www.tensorflow.org/) and [Pandas](https://pandas.pydata.org) installed. This program was built on Python 3.6 and Tensorflow 1.5.
