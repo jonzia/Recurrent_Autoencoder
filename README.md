@@ -52,7 +52,7 @@ with tf.name_scope("Output_Data"):		# Output data filenames (.txt)
 	validation_loss = os.path.join(dir_name, "validation_loss.txt")
 ```
 5. Run *autoencoder.py*. **(1)** Outputs of the program include training and validation loss .txt files as well as the Tensorboard graph and summaries. The model is saved at each timestep, and the optimal model as per the validation loss is saved separately.
-6. *(Optional)* Run *test_bench.py* to obtain prediction and target values on a test dataset for the trained model. Ensure that proper filepaths are set before running.
+6. *(Optional)* Run *test_bench.py* to obtain prediction, target, and latent representation values on a test dataset for the trained model. Ensure that proper filepaths are set before running.
 
 ## Change Log
 _v1.0.3_: Updated to a more generalizable architecture proposed by [Cho et. al (2014)](https://arxiv.org/pdf/1406.1078.pdf).
