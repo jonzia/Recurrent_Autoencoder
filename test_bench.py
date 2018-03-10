@@ -38,7 +38,7 @@ WINDOW_INT = lstm_encoder.num_steps		# Rolling window step interval
 # ----------------------------------------------------
 # Specify filenames
 # Root directory:
-dir_name = "/Users/username"
+dir_name = "Users/jonathanzia"
 with tf.name_scope("Training_Data"):	# Testing dataset
 	Dataset = os.path.join(dir_name, "data/dataset.csv")
 with tf.name_scope("Model_Data"):		# Model load path
@@ -49,6 +49,8 @@ with tf.name_scope("Output_Data"):		# Output data filenames (.txt)
 	# These .txt files will contain prediction and target data respectively for Matlab analysis
 	prediction_file = os.path.join(dir_name, "predictions.txt")
 	target_file = os.path.join(dir_name, "targets.txt")
+	# This .txt file will contain latent representation for each time step
+	latent_file = os.path.join(dir_name, "latent.txt")
 
 # Obtain length of testing and validation datasets
 file_length = len(pd.read_csv(Dataset))
@@ -133,9 +135,9 @@ with tf.variable_scope("Encoder_RNN"):
 		# Obtain logits by performing (weights)*(output)+(biases)
 		logit = tf.matmul(output, W_latent) + b_latent
 # Convert logits to tensor
-latent_layer = tf.convert_to_tensor(logit)
+logit_tensor = tf.convert_to_tensor(logit)
 # Converting to dimensions [batch_size, 1 (num_steps), latent]
-latent_layer = tf.expand_dims(latent_layer,1,name='latent_layer')
+latent_layer = tf.expand_dims(logit_tensor,1,name='latent_layer')
 
 
 # ----------------------------------------------------
@@ -220,8 +222,8 @@ with tf.Session() as sess:
 
 		# Input data
 		data = {inputs: features, targets:labels}
-		# Run and evalueate for summary variables, loss, predictions, and targets
-		summary, loss_, pred, tar = sess.run([merged, loss, predictions, targets], feed_dict=data)
+		# Run and evaluate for summary variables, loss, predictions, targets, and latent layer
+		summary, loss_, pred, tar, latent = sess.run([merged, loss, predictions, targets, logit_tensor], feed_dict=data)
 
 		# Report parameters
 		if True:	# Conditional statement for filtering outputs
@@ -239,6 +241,9 @@ with tf.Session() as sess:
 			# Write targets
 			with open(target_file, 'a') as file_object:
 				np.savetxt(file_object, tar[0,:,:])
+			# Write latent representation
+			with open(latent_file, 'a') as file_object:
+				np.savetxt(file_object, latent)
 
 		# Writing summaries to Tensorboard
 		writer.add_summary(summary,step)
