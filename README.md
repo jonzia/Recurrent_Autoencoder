@@ -55,6 +55,7 @@ with tf.name_scope("Output_Data"):		# Output data filenames (.txt)
 6. *(Optional)* Run *test_bench.py* to obtain prediction, target, and latent representation values on a test dataset for the trained model. Ensure that proper filepaths are set before running.
 
 The following is an example of a rapid implementation which encodes the features of a simple sine wave.
+
 ![Training and Validation Loss](https://raw.githubusercontent.com/jonzia/Recurrent_Autoencoder/master/Media/train_val.png)
 ![Predictions and Targets](https://raw.githubusercontent.com/jonzia/Recurrent_Autoencoder/master/Media/pred_tar.png)
 
