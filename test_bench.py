@@ -38,7 +38,7 @@ WINDOW_INT = lstm_encoder.num_steps		# Rolling window step interval
 # ----------------------------------------------------
 # Specify filenames
 # Root directory:
-dir_name = "Users/jonathanzia"
+dir_name = "Users/username"
 with tf.name_scope("Training_Data"):	# Testing dataset
 	Dataset = os.path.join(dir_name, "data/dataset.csv")
 with tf.name_scope("Model_Data"):		# Model load path
