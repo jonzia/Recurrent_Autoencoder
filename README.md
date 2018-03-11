@@ -6,7 +6,7 @@ Recurrent autoencoder for unsupervised feature extraction from multidimensional 
 ## Description
 This program implements a recurrent autoencoder for time-series analysis. The input to the program is a .csv file with feature columns. The time-series input is encoded with a single LSTM layer and decoded with a second LSTM layer to recreate the input. The output of the encoder layer feeds in to a single latent layer, which contains a compressed representation of the feature vector. The architecture for the network is the same as illustrated in [this paper](https://arxiv.org/pdf/1406.1078.pdf).
 
-![Tensorboard Graph](https://raw.githubusercontent.com/jonzia/Recurrent_Autoencoder/master/Graph_102.png)
+![Tensorboard Graph](https://raw.githubusercontent.com/jonzia/Recurrent_Autoencoder/master/Media/Graph_102.png)
 
 ## To Run
 1. The program is designed to accept .csv files with the following format.
@@ -53,6 +53,10 @@ with tf.name_scope("Output_Data"):		# Output data filenames (.txt)
 ```
 5. Run *autoencoder.py*. **(1)** Outputs of the program include training and validation loss .txt files as well as the Tensorboard graph and summaries. The model is saved at each timestep, and the optimal model as per the validation loss is saved separately.
 6. *(Optional)* Run *test_bench.py* to obtain prediction, target, and latent representation values on a test dataset for the trained model. Ensure that proper filepaths are set before running.
+
+The following is an example of a rapid implementation which encodes the features of a simple sine wave.
+![Training and Validation Loss](https://raw.githubusercontent.com/jonzia/Recurrent_Autoencoder/master/Media/train_val.png)
+![Predictions and Targets](https://raw.githubusercontent.com/jonzia/Recurrent_Autoencoder/master/Media/pred_tar.png)
 
 ## Change Log
 _v1.0.3_: Updated to a more generalizable architecture proposed by [Cho et. al (2014)](https://arxiv.org/pdf/1406.1078.pdf).
