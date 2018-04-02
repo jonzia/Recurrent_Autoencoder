@@ -6,8 +6,6 @@ Recurrent autoencoder for unsupervised feature extraction from multidimensional 
 ## Description
 This program implements a recurrent autoencoder for time-series analysis. The input to the program is a .csv file with feature columns. The time-series input is encoded with a single LSTM layer and decoded with a second LSTM layer to recreate the input. The output of the encoder layer feeds in to a single latent layer, which contains a compressed representation of the feature vector. The architecture for the network is the same as illustrated in [this paper](https://arxiv.org/pdf/1406.1078.pdf).
 
-![Tensorboard Graph](https://raw.githubusercontent.com/jonzia/Recurrent_Autoencoder/master/Media/Graph_102.png)
-
 ## To Run
 1. The program is designed to accept .csv files with the following format.
 
