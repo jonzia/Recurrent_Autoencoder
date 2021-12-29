@@ -1,7 +1,7 @@
 # Recurrent Autoencoder v1.0.3
 
 ## Overview
-Recurrent autoencoder for unsupervised feature extraction from multidimensional time-series ([Design Blog](https://www.jonzia.me/projects/recurrent-autoencoder)).
+Recurrent autoencoder for unsupervised feature extraction from multidimensional time-series.
 
 ## Description
 This program implements a recurrent autoencoder for time-series analysis. The input to the program is a .csv file with feature columns. The time-series input is encoded with a single LSTM layer and decoded with a second LSTM layer to recreate the input. The output of the encoder layer feeds in to a single latent layer, which contains a compressed representation of the feature vector. The architecture for the network is the same as illustrated in [this paper](https://arxiv.org/pdf/1406.1078.pdf).
